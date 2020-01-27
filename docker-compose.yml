@@ -1,5 +1,15 @@
 version: "3.7"
 services:
+    api-db:
+        image: mysql:8.0
+        command: --default-authentication-plugin=mysql_native_password
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: root
+        ports:
+            - "33061:3306"
+        volumes:
+            - api-db:/var/lib/mysql
     api:
         build:
             context: api/docker
@@ -20,6 +30,8 @@ services:
             APP_DEBUG: 1
         volumes:
             - ./api:/app
+        depends_on:
+            - api-db
 
     api-php-cli:
         build:
@@ -30,3 +42,8 @@ services:
             APP_DEBUG: 1
         volumes:
             - ./api:/app
+        depends_on:
+            - api-db
+
+volumes:
+  api-db:

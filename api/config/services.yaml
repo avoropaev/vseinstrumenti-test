@@ -1,0 +1,72 @@
+parameters:
+    doctrine.entity_paths:
+        - '/app/src/Entity'
+    doctrine.connection_params:
+        driver: 'pdo_mysql'
+        url: 'mysql://root:root@api-db:3306/root'
+        charset: 'utf8mb4'
+        server_version: '8.0'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    App\:
+        resource: '../src/*'
+        exclude: '../src/{DependencyInjection,Entity,Migrations,Tests,Kernel.php}'
+
+    App\Controller\:
+        resource: '../src/Controller/*'
+        public: true
+
+    request_context:
+        class: Symfony\Component\Routing\RequestContext
+
+    url_matcher:
+        class: Symfony\Component\Routing\Matcher\UrlMatcher
+        arguments: ['%routes%', '@request_context']
+
+    request_stack:
+        class: Symfony\Component\HttpFoundation\RequestStack
+
+    controller_resolver:
+        class: Symfony\Component\HttpKernel\Controller\ContainerControllerResolver
+        arguments: ['@service_container']
+
+    argument_resolver:
+        class: Symfony\Component\HttpKernel\Controller\ArgumentResolver
+
+    listener.router:
+        class: Symfony\Component\HttpKernel\EventListener\RouterListener
+        arguments: ['@url_matcher', '@request_stack']
+
+    listener.response:
+        class: Symfony\Component\HttpKernel\EventListener\ResponseListener
+        arguments: ['UTF-8']
+
+    event_dispatcher:
+        class: Symfony\Component\EventDispatcher\EventDispatcher
+        calls:
+            -   method: addSubscriber
+                arguments:
+                    - '@listener.router'
+            -   method: addSubscriber
+                arguments:
+                    - '@listener.response'
+
+    http_kernel:
+        class: Symfony\Component\HttpKernel\HttpKernel
+        arguments: ['@event_dispatcher', '@controller_resolver', '@request_stack', '@argument_resolver']
+        public: true
+
+    doctrine_config:
+        class: Doctrine\ORM\Configuration
+        factory: ['Doctrine\ORM\Tools\Setup', 'createAnnotationMetadataConfiguration']
+        arguments: ['%doctrine.entity_paths%']
+
+    Doctrine\ORM\EntityManagerInterface:
+        class: Doctrine\ORM\EntityManager
+        factory: ['Doctrine\ORM\EntityManager', 'create']
+        arguments: ['%doctrine.connection_params%', '@doctrine_config']

@@ -4,6 +4,7 @@ RUN mv $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 
 COPY ./development/php/conf.d /usr/local/etc/php/conf.d
 
+RUN docker-php-ext-install pdo_mysql
 RUN apk add unzip
 
 ENV COMPOSER_ALLOW_SUPERUSER 1
