@@ -54,5 +54,5 @@ api-docs-generate:
 	docker-compose run --rm api-php-cli composer openapi src/Controller -- --output public/docs/openapi.json
 
 
-connect-db:
+api-connect-db:
 	docker-compose exec api-db psql
