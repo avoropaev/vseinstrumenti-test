@@ -2,10 +2,15 @@ parameters:
     doctrine.entity_paths:
         - '/app/src/Entity'
     doctrine.connection_params:
-        driver: 'pdo_mysql'
-        url: 'mysql://root:root@api-db:3306/root'
-        charset: 'utf8mb4'
-        server_version: '8.0'
+        driver: 'pdo_pgsql'
+        url: 'pgsql://%env(DB_USER)%:%env(DB_PASSWORD)%@api-db:5432/%env(DB_NAME)%'
+        charset: 'utf8'
+        server_version: '11.2'
+    dbal.types:
+        order_id: App\Entity\Order\IdType
+        order_status: App\Entity\Order\StatusType
+        order_item_id: App\Entity\Order\Item\IdType
+        product_id: App\Entity\Product\IdType
 
 services:
     _defaults:
@@ -38,6 +43,12 @@ services:
     argument_resolver:
         class: Symfony\Component\HttpKernel\Controller\ArgumentResolver
 
+    subscriber.exception:
+        class: App\Subscriber\ExceptionSubscriber
+
+    listener.body:
+        class: App\Listener\BodyListener
+
     listener.router:
         class: Symfony\Component\HttpKernel\EventListener\RouterListener
         arguments: ['@url_matcher', '@request_stack']
@@ -55,6 +66,17 @@ services:
             -   method: addSubscriber
                 arguments:
                     - '@listener.response'
+            -   method: addSubscriber
+                arguments:
+                    - '@subscriber.exception'
+            -   method: addListener
+                arguments:
+                    - 'kernel.request'
+                    - '@listener.body'
+                    - 128
+
+    Symfony\Component\EventDispatcher\EventDispatcher:
+        alias: 'event_dispatcher'
 
     http_kernel:
         class: Symfony\Component\HttpKernel\HttpKernel
@@ -64,9 +86,54 @@ services:
     doctrine_config:
         class: Doctrine\ORM\Configuration
         factory: ['Doctrine\ORM\Tools\Setup', 'createAnnotationMetadataConfiguration']
-        arguments: ['%doctrine.entity_paths%']
+        arguments:
+            - '%doctrine.entity_paths%'
+            - '%env(bool:APP_DEBUG)%'
+            - ~
+            - ~
+            - false
 
-    Doctrine\ORM\EntityManagerInterface:
+    entity_manager:
         class: Doctrine\ORM\EntityManager
         factory: ['Doctrine\ORM\EntityManager', 'create']
         arguments: ['%doctrine.connection_params%', '@doctrine_config']
+        public: true
+
+    Doctrine\ORM\EntityManagerInterface:
+        alias: 'entity_manager'
+
+    Symfony\Component\Validator\Validator\ValidatorInterface:
+        factory: ['Symfony\Component\Validator\Validation', 'createValidator']
+
+    json_encoder:
+        class: Symfony\Component\Serializer\Encoder\JsonEncoder
+
+    camel_case_to_snake_case_name_converter:
+        class: Symfony\Component\Serializer\NameConverter\CamelCaseToSnakeCaseNameConverter
+
+    reflection_extractor:
+        class: Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor
+
+    object_normalizer:
+        class: Symfony\Component\Serializer\Normalizer\ObjectNormalizer
+        arguments:
+            - ~
+            - '@camel_case_to_snake_case_name_converter'
+            - ~
+            - '@reflection_extractor'
+
+    array_denormalizer:
+        class: Symfony\Component\Serializer\Normalizer\ArrayDenormalizer
+
+
+    Symfony\Component\Serializer\SerializerInterface:
+        class: Symfony\Component\Serializer\Serializer
+        arguments:
+            - ['@object_normalizer', '@array_denormalizer']
+            - ['@json_encoder']
+
+    Symfony\Component\Serializer\Normalizer\DenormalizerInterface:
+        alias: Symfony\Component\Serializer\SerializerInterface
+
+    Doctrine\DBAL\Connection:
+        factory: ['@entity_manager', 'getConnection']

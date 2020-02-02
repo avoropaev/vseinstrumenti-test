@@ -1,4 +1,34 @@
-index:
-    path:       /home
-    controller: App\Controller\HomeController
+ping:
+    path:       /ping
+    controller: App\Controller\HomeController::ping
+    methods:    GET
+
+products.create_random:
+    path:       /products/create_random
+    controller: App\Controller\ProductController::createRandom
+    methods:    POST
+    format: json
+
+products.get_all:
+    path:       /products
+    controller: App\Controller\ProductController::getAll
+    methods:    GET
+
+orders.create:
+    path:       /orders
+    controller: App\Controller\OrderController::create
+    methods:    POST
+    format: json
+
+orders.pay:
+    path:       /orders/{id}/pay
+    controller: App\Controller\OrderController::pay
+    methods:    POST
+    format: json
+    requirements:
+        id: '\d+'
+
+orders.get_all:
+    path:       /orders
+    controller: App\Controller\OrderController::getAll
     methods:    GET
