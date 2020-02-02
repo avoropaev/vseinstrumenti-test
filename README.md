@@ -25,7 +25,7 @@ Environment:
 
 App:
 - Composer install: `make api-composer-install`
-- Composer update: `make api-composer--update`
+- Composer update: `make api-composer-update`
 - Generate docs: `make api-docs-generate`
 - Generate migrations: `make api-migrations-generate`
 - Run migrations: `make api-migrations-migrate`
